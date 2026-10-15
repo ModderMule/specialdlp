@@ -16,13 +16,15 @@
 
 #include <cstdio>
 
+static_assert(sizeof(TCHAR) == sizeof(char16_t), "build with UNICODE: upstream takes wide strings");
+
 namespace {
 
 // Signatures as used by eMule Xtreme (DLP.h)
 using GetDLPVersionFn = DWORD(__cdecl*)();
 using CheckModFn = LPCTSTR(__cdecl*)(LPCTSTR modversion, LPCTSTR clientversion);
 using CheckNameFn = LPCTSTR(__cdecl*)(LPCTSTR username);
-using CheckNameHashModFn = LPCTSTR(__cdecl*)(CString username, CString& userhash, CString& modversion);
+using CheckNameHashModFn = LPCTSTR(__cdecl*)(CStringW username, CStringW& userhash, CStringW& modversion);
 using CheckSpamFn = LPCTSTR(__cdecl*)(LPCTSTR messagetext);
 using CheckUserhashFn = LPCTSTR(__cdecl*)(const PBYTE userhash);
 using CheckTagFn = LPCTSTR(__cdecl*)(UINT tagnumber);
@@ -73,9 +75,9 @@ std::optional<std::u16string> runUpstream(const Upstream& up, const sdlp::test::
     if (v.func == "userhard") return wrapW(up.userHard(w(a[0])));
     if (v.func == "usersoft") return wrapW(up.userSoft(w(a[0])));
     if (v.func == "namehashmod") {
-        CString hash(w(a[1]));
-        CString mod(w(a[2]));
-        return wrapW(up.nameHashMod(CString(w(a[0])), hash, mod));
+        CStringW hash(w(a[1]));
+        CStringW mod(w(a[2]));
+        return wrapW(up.nameHashMod(CStringW(w(a[0])), hash, mod));
     }
     if (v.func == "spam") return wrapW(up.spam(w(a[0])));
     if (v.func == "hellotag") return wrapW(up.helloTag(sdlp::test::parseHex(a[0])));

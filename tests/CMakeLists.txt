@@ -14,6 +14,8 @@ if(WIN32 AND SDLP_DIFF_UPSTREAM_DIR)
     add_executable(sdlp_diff_upstream diff_upstream.cpp vectors.h)
     target_link_libraries(sdlp_diff_upstream PRIVATE specialdlp)
     target_compile_options(sdlp_diff_upstream PRIVATE /utf-8)
+    # upstream is CharacterSet=Unicode; without these CString/LPCTSTR are narrow
+    target_compile_definitions(sdlp_diff_upstream PRIVATE UNICODE _UNICODE)
     set_target_properties(sdlp_diff_upstream PROPERTIES RUNTIME_OUTPUT_DIRECTORY $<TARGET_FILE_DIR:specialdlp>)
     foreach(variant lite allverycd easymule nickname tag)
         add_test(NAME sdlp_diff_${variant}
