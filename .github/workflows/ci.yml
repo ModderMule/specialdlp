@@ -87,8 +87,9 @@ jobs:
             $cfg = $map[$variant]
             $out = "$PWD\upstream-bin\$variant\"
             # runner may lack the upstream toolset (v145); v143 builds the same sources
+            # runner lacks Spectre-mitigated MFC libs; codegen mitigation doesn't change rule output
             msbuild $proj /m /nologo /v:minimal /p:Configuration=$cfg /p:Platform=x64 `
-              /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:OutDir=$out /p:IntDir="$PWD\upstream-obj\$variant\"
+              /p:SpectreMitigation=false /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:OutDir=$out /p:IntDir="$PWD\upstream-obj\$variant\"
             if ($LASTEXITCODE -ne 0) { throw "upstream $cfg failed" }
             if (-not (Test-Path "$out\antiLeechx64.dll")) { Get-ChildItem -Recurse $out; throw "antiLeechx64.dll missing for $variant" }
           }

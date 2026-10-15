@@ -7,6 +7,10 @@
 // std headers first: the compat macros (_wcsicmp, ...) must not touch CRT declarations
 #include <algorithm>
 #include <charconv>
+#if defined(__APPLE__)
+#include <cstdlib>
+#include <xlocale.h>
+#endif
 
 #include "sdlp_compat.h"
 
@@ -174,9 +178,21 @@ double toDouble(const wchar_t* s) noexcept
     }
 
     double value = 0.0;
+#if defined(__APPLE__)
+    // libc++ floating from_chars needs macOS 26; strtod_l in the C locale parses the same forms
+    if (pos >= buf.size() || isSpace(static_cast<unsigned char>(buf[pos])) || buf[pos] == '+' || buf[pos] == '-')
+        return 0.0;
+    static const locale_t cLocale = newlocale(LC_ALL_MASK, "C", nullptr);
+    const char* start = buf.c_str() + pos - (fmt == std::chars_format::hex ? 2 : 0);
+    char* end = nullptr;
+    value = strtod_l(start, &end, cLocale);
+    if (end == start)
+        return 0.0;
+#else
     const auto res = std::from_chars(buf.data() + pos, buf.data() + buf.size(), value, fmt);
     if (res.ec != std::errc{})
         return 0.0;
+#endif
     return negative ? -value : value;
 }
 
