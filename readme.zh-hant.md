@@ -24,3 +24,4 @@ Strict DLP Chinese (SDC) 是基於 eMule Xtreme Mod 的官方 DLP （動態反�
 * [GitLab 專案主頁](https://gitlab.com/chengr28/specialdlp)
 * [Sourceforge 專案主頁](https://sourceforge.net/projects/specialdlp)
 * [eMuleFans 電騾愛好者上的 SDC 頁面](https://emulefans.com/news/plugin/dlp/sdc/?variant=zh-tw)
+* [eMuleQt](https://emule-qt.org/)

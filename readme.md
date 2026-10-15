@@ -55,3 +55,4 @@ Test coverage:
 * [Project in GitLab](https://gitlab.com/chengr28/specialdlp)
 * [Project in Sourceforge](https://sourceforge.net/projects/specialdlp)
 * [SDC in eMuleFans 电骡爱好者](https://emulefans.com/news/plugin/dlp/sdc)
+* [eMuleQt](https://emule-qt.org/)
