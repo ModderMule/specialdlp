@@ -102,28 +102,143 @@ jobs:
       - name: Compare
         run: ctest --test-dir build -C Release --output-on-failure
 
+  # Every green master push (or manual run on master) publishes v<project VERSION>;
+  # a tag push must match it. Same version already released from another commit
+  # -> skipped, bump VERSION (scripts/publish-release.sh).
   release:
     name: release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v'))
     needs: [build, diff-upstream]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    concurrency:
+      group: release-${{ github.repository }}
+      cancel-in-progress: false   # never strand a half-uploaded release
     steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0   # tags + history for the compare link
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          set -euo pipefail
+          ver=$(sed -n 's/^project(specialdlp VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          [[ "$ver" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error file=CMakeLists.txt::cannot parse VERSION"; exit 1; }
+          tag="v${ver}"
+          if [[ "$GITHUB_REF" == refs/tags/* && "$GITHUB_REF_NAME" != "$tag" ]]; then
+            echo "::error::tag ${GITHUB_REF_NAME} does not match CMakeLists.txt VERSION ${ver} (expected ${tag})"
+            exit 1
+          fi
+          publish=true
+          if at=$(git rev-parse -q --verify "refs/tags/${tag}^{commit}"); then
+            if [[ "$at" != "$GITHUB_SHA" ]]; then
+              echo "::notice::${tag} already released from ${at:0:7}; bump VERSION in CMakeLists.txt to publish this commit"
+              publish=false
+            fi
+          fi
+          prev=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname --merged "$GITHUB_SHA" | grep -vx "$tag" | head -n1 || true)
+          {
+            echo "tag=${tag}"
+            echo "version=${ver}"
+            echo "publish=${publish}"
+            echo "prev=${prev}"
+          } >> "$GITHUB_OUTPUT"
+
       - uses: actions/download-artifact@v8
+        if: steps.tag.outputs.publish == 'true'
         with:
           pattern: specialdlp-*
           path: dist
           merge-multiple: true
 
-      - name: Checksums
+      - name: Verify assets and checksums
+        if: steps.tag.outputs.publish == 'true'
+        working-directory: dist
+        env:
+          VERSION: ${{ steps.tag.outputs.version }}
         run: |
-          cd dist
-          sha256sum * > SHA256SUMS.txt
-          cat SHA256SUMS.txt
+          set -euo pipefail
+          assets=(
+            "specialdlp-${VERSION}-linux-x64.tar.gz"
+            "specialdlp-${VERSION}-linux-arm64.tar.gz"
+            "specialdlp-${VERSION}-mac-arm64.tar.gz"
+            "specialdlp-${VERSION}-mac-x64.tar.gz"
+            "specialdlp-${VERSION}-windows-x64.zip"
+            "specialdlp-${VERSION}-windows-arm64.zip"
+          )
+          missing=0
+          for f in "${assets[@]}"; do
+            [[ -f "$f" ]] || { echo "::error::missing release asset: $f"; missing=1; }
+          done
+          if (( missing )); then ls -la; exit 1; fi
+          sha256sum "${assets[@]}" | tee SHA256SUMS.txt
 
+      - name: Release notes
+        if: steps.tag.outputs.publish == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+          VERSION: ${{ steps.tag.outputs.version }}
+          PREV: ${{ steps.tag.outputs.prev }}
+        run: |
+          set -euo pipefail
+          if [[ -n "$PREV" ]]; then
+            compare="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${PREV}...${TAG}"
+          else
+            compare="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commits/${TAG}"
+          fi
+          {
+            echo "## specialdlp ${TAG}"
+            echo
+            echo "Portable anti-leecher library, built from \`${GITHUB_SHA:0:7}\`."
+            echo
+            echo "| Platform | Download |"
+            echo "| --- | --- |"
+            echo "| Linux x86_64 | \`specialdlp-${VERSION}-linux-x64.tar.gz\` |"
+            echo "| Linux arm64 | \`specialdlp-${VERSION}-linux-arm64.tar.gz\` |"
+            echo "| macOS 13+ (Apple silicon) | \`specialdlp-${VERSION}-mac-arm64.tar.gz\` |"
+            echo "| macOS 13+ (Intel) | \`specialdlp-${VERSION}-mac-x64.tar.gz\` |"
+            echo "| Windows x64 | \`specialdlp-${VERSION}-windows-x64.zip\` |"
+            echo "| Windows arm64 | \`specialdlp-${VERSION}-windows-arm64.zip\` |"
+            echo
+            echo "**Full changelog:** ${compare}"
+            echo
+            echo "<details><summary>SHA-256 checksums</summary>"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+            echo
+            echo "</details>"
+          } > release-notes.md
+          cat release-notes.md
+
+      # Upserts: a re-run of the same commit replaces the assets.
       # No gh CLI writes; marketplace action with the per-run token.
       - uses: softprops/action-gh-release@v3
+        if: steps.tag.outputs.publish == 'true'
         with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          name: specialdlp ${{ steps.tag.outputs.tag }}
+          body_path: release-notes.md
           files: dist/*
           fail_on_unmatched_files: true
+          make_latest: true
+          token: ${{ github.token }}
+
+      - name: Summary
+        if: steps.tag.outputs.publish == 'true'
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          {
+            echo "### Released ${TAG}"
+            echo
+            echo "${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/releases/tag/${TAG}"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
