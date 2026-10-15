@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.key }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # keys match the eMuleQt update manifest platform keys
+          - { os: ubuntu-latest,       key: linux-x64,     cmake_args: '' }
+          - { os: ubuntu-24.04-arm,    key: linux-arm64,   cmake_args: '' }
+          - { os: macos-latest,        key: mac-arm64,     cmake_args: '-DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0' }
+          - { os: macos-26-intel,      key: mac-x64,       cmake_args: '-DCMAKE_OSX_ARCHITECTURES=x86_64 -DCMAKE_OSX_DEPLOYMENT_TARGET=13.0' }
+          - { os: windows-latest,      key: windows-x64,   cmake_args: '-A x64' }
+          - { os: windows-11-arm,      key: windows-arm64, cmake_args: '-A ARM64' }
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release ${{ matrix.cmake_args }}
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package
+        shell: bash
+        run: |
+          set -euo pipefail
+          ver=$(sed -n 's/^project(specialdlp VERSION \([0-9.]*\).*/\1/p' CMakeLists.txt)
+          name="specialdlp-${ver}-${{ matrix.key }}"
+          cmake --install build --config Release --prefix "stage/${name}"
+          cp license readme.md "stage/${name}/"
+          mkdir -p dist
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            (cd stage && 7z a -tzip "../dist/${name}.zip" "${name}" >/dev/null)
+          else
+            tar -C stage -czf "dist/${name}.tar.gz" "${name}"
+          fi
+          ls -l dist
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: specialdlp-${{ matrix.key }}
+          path: dist/*
+          if-no-files-found: error
+
+  # Same vectors through the original MFC antiLeech DLL and through the port.
+  diff-upstream:
+    name: diff vs upstream (windows-x64)
+    runs-on: windows-latest
+    env:
+      UPSTREAM_TAG: v44006.1
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/checkout@v5
+        with:
+          repository: chengr28/specialdlp
+          ref: ${{ env.UPSTREAM_TAG }}
+          path: upstream
+
+      - uses: microsoft/setup-msbuild@v2
+
+      - name: Build upstream variants
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $proj = 'upstream\specialdlp\specialdlp\specialdlp.vcxproj'
+          $map = @{ lite = 'Release_SDC_LITE'; allverycd = 'Release_SDC_ALL_VERYCD'; easymule = 'Release_SDC_EASYMULE';
+                    nickname = 'Release_SDC_VERYCD_NICKNAME'; tag = 'Release_SDC_VERYCD_TAG' }
+          foreach ($variant in $map.Keys) {
+            $cfg = $map[$variant]
+            $out = "$PWD\upstream-bin\$variant\"
+            # runner may lack the upstream toolset (v145); v143 builds the same sources
+            msbuild $proj /m /nologo /v:minimal /p:Configuration=$cfg /p:Platform=x64 `
+              /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:OutDir=$out /p:IntDir="$PWD\upstream-obj\$variant\"
+            if ($LASTEXITCODE -ne 0) { throw "upstream $cfg failed" }
+            if (-not (Test-Path "$out\antiLeechx64.dll")) { Get-ChildItem -Recurse $out; throw "antiLeechx64.dll missing for $variant" }
+          }
+
+      - name: Configure
+        run: cmake -S . -B build -A x64 -DSDLP_DIFF_UPSTREAM_DIR="${{ github.workspace }}/upstream-bin"
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Compare
+        run: ctest --test-dir build -C Release --output-on-failure
+
+  release:
+    name: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, diff-upstream]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: specialdlp-*
+          path: dist
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # No gh CLI writes; marketplace action with the per-run token.
+      - uses: softprops/action-gh-release@v3
+        with:
+          files: dist/*
+          fail_on_unmatched_files: true

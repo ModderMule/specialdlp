@@ -27,12 +27,10 @@
 #endif
 #endif
 //SDC team end
-#include <atlstr.h>
+//SDLP: portable build, ATL/shlwapi replaced by sdlp_compat.h
+#include "sdlp_compat.h"
+#include "sdlp_rules.h"
 #include "antiLeech.h"
-
-#ifdef _DEBUG
-#define new DEBUG_NEW
-#endif
 
 //>>> eWombat [SNAFU_V3]
 //SDC team start
@@ -67,34 +65,16 @@ LPCTSTR apszSnafuTag[] =
 //	_T("[eChanblardNext]"),										//21 zz_fly
 };
 
-BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpvReserved)
-{
-//SDC team start
-#if defined(SPECIAL_DLP_VERSION)
-	//Do nothing.
-#else //Official
-	switch (fdwReason)
-	{
-		case DLL_PROCESS_ATTACH:
-		case DLL_THREAD_ATTACH:
-		case DLL_THREAD_DETACH:
-		case DLL_PROCESS_DETACH:
-		break;
-	}
-#endif
-//SDC team end
-
-	return TRUE;
-}
+//SDLP: DllMain dropped, nothing to do on attach/detach
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-const DWORD __declspec(dllexport) GetDLPVersion(void)
+const DWORD SDLP_RULE GetDLPVersion(void)
 {
 	return DLPVERSION;
 }
 #else //Official
-void __declspec(dllexport) TestFunc(void)
+void SDLP_RULE TestFunc(void)
 {
 	::MessageBox(NULL, _T("Inside the DLL!"), _T("Nix"), 0);
 }
@@ -103,7 +83,7 @@ void __declspec(dllexport) TestFunc(void)
 
 //Drop old version support
 /*
-LPCTSTR __declspec(dllexport) DLPCheckModstring(LPCTSTR modversion, LPCTSTR clientversion)
+LPCTSTR SDLP_RULE DLPCheckModstring(LPCTSTR modversion, LPCTSTR clientversion)
 {
 	if (modversion == NULL || clientversion == NULL)
 		return NULL;
@@ -197,7 +177,7 @@ LPCTSTR __declspec(dllexport) DLPCheckModstring(LPCTSTR modversion, LPCTSTR clie
 	return NULL;
 }
 
-LPCTSTR __declspec(dllexport) DLPCheckUsername(LPCTSTR username)
+LPCTSTR SDLP_RULE DLPCheckUsername(LPCTSTR username)
 {
 	if (username == NULL)
 		return NULL;
@@ -272,9 +252,9 @@ LPCTSTR __declspec(dllexport) DLPCheckUsername(LPCTSTR username)
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-LPCTSTR __declspec(dllexport) DLPCheckNameAndHash(const CString username, const CString & userhash)
+LPCTSTR SDLP_RULE DLPCheckNameAndHash(const CString username, const CString & userhash)
 #else //Official
-LPCTSTR __declspec(dllexport) DLPCheckNameAndHash(CString username, CString & userhash)
+LPCTSTR SDLP_RULE DLPCheckNameAndHash(CString username, CString & userhash)
 #endif
 //SDC team end
 {
@@ -358,14 +338,14 @@ bool IsTypicalHex(CString & addon)
 	return false;
 }
 
-LPCTSTR __declspec(dllexport) DLPCheckUserhash(const PBYTE userhash)
+LPCTSTR SDLP_RULE DLPCheckUserhash(const PBYTE userhash)
 {
 //No more AJ check
 	return NULL;
 }
 
 //new versions
-LPCTSTR __declspec(dllexport) DLPCheckModstring_Hard(LPCTSTR modversion, LPCTSTR clientversion)
+LPCTSTR SDLP_RULE DLPCheckModstring_Hard(LPCTSTR modversion, LPCTSTR clientversion)
 {
 	if (modversion == NULL || clientversion == NULL)
 		return NULL;
@@ -833,7 +813,7 @@ LPCTSTR __declspec(dllexport) DLPCheckModstring_Hard(LPCTSTR modversion, LPCTSTR
 	return NULL;
 }
 
-LPCTSTR __declspec(dllexport) DLPCheckModstring_Soft(LPCTSTR modversion, LPCTSTR clientversion)
+LPCTSTR SDLP_RULE DLPCheckModstring_Soft(LPCTSTR modversion, LPCTSTR clientversion)
 {
 	if (modversion == NULL || clientversion == NULL)
 		return NULL;
@@ -884,12 +864,16 @@ LPCTSTR __declspec(dllexport) DLPCheckModstring_Soft(LPCTSTR modversion, LPCTSTR
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-#if (defined(SDC_ALL_VERYCD) || defined(SDC_VERYCD_TAG))
-	if (wcsstr(modversion, L"VeryCD") != nullptr && 
+//SDLP: build variants are a runtime option
+	if (SDC_VARIANT(AllVeryCD) || SDC_VARIANT(VeryCDTag))
+	{
+	if (wcsstr(modversion, L"VeryCD") != nullptr &&
 		wcsstr(modversion, L"VeryCD 090304") == nullptr			//It will be handled by DLPCheckNameAndHashAndMod function.
 	) [[unlikely]]
 		return L"<SDC> all-verycd";
-#elif defined(SDC_EASYMULE)
+	}
+	else if (SDC_VARIANT(EasyMule))
+	{
 	if (wcsstr(modversion, L"easyMule") != nullptr ||			//Current ModString
 	//ModString in 2007 and 2008
 		(wcsstr(modversion, L"VeryCD ") != nullptr && 
@@ -904,14 +888,14 @@ LPCTSTR __declspec(dllexport) DLPCheckModstring_Soft(LPCTSTR modversion, LPCTSTR
 		wcsstr(modversion, L" 081218") != nullptr))
 	) [[unlikely]]
 		return L"<SDC> easymule";
-#endif
+	}
 #endif
 //SDC team end
 
 	return NULL;
 }
 
-LPCTSTR __declspec(dllexport) DLPCheckUsername_Hard(LPCTSTR username)
+LPCTSTR SDLP_RULE DLPCheckUsername_Hard(LPCTSTR username)
 {
 	if (username == NULL)
 		return NULL;
@@ -1267,7 +1251,7 @@ LPCTSTR __declspec(dllexport) DLPCheckUsername_Hard(LPCTSTR username)
 	return NULL;
 }
 
-LPCTSTR __declspec(dllexport) DLPCheckUsername_Soft(LPCTSTR username)
+LPCTSTR SDLP_RULE DLPCheckUsername_Soft(LPCTSTR username)
 {
 	if (username == NULL)
 		return NULL;
@@ -1305,15 +1289,16 @@ LPCTSTR __declspec(dllexport) DLPCheckUsername_Soft(LPCTSTR username)
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-#if defined(SDC_VERYCD_TAG)
-	if (StrStrIW(username, L"[VeryCD]") != nullptr && 
+	if (SDC_VARIANT(VeryCDTag))
+	{
+	if (StrStrIW(username, L"[VeryCD]") != nullptr &&
 	//Below client will be handled by DLPCheckUsername_Hard function.
 		wcsstr(username, L"a1[VeryCD]xthame") == nullptr && 
 		(StrStrIW(username, L"[CHN][VeryCD]") == nullptr || (StrStrIW(username, L"[Your") == nullptr && StrStrIW(username, L"[username]") == nullptr)) && 
 		wcsstr(username, L"[CHN][VeryCD]QQ") == nullptr
 	) [[unlikely]]
 		return L"<SDC> verycd-tag";
-#endif
+	}
 #endif
 //SDC team end
 
@@ -1322,9 +1307,9 @@ LPCTSTR __declspec(dllexport) DLPCheckUsername_Soft(LPCTSTR username)
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-LPCTSTR __declspec(dllexport) DLPCheckNameAndHashAndMod(const CString username, const CString & userhash, const CString & modversion)
+LPCTSTR SDLP_RULE DLPCheckNameAndHashAndMod(const CString username, const CString & userhash, const CString & modversion)
 #else //Official
-LPCTSTR __declspec(dllexport) DLPCheckNameAndHashAndMod(CString username, CString & userhash, CString & modversion)
+LPCTSTR SDLP_RULE DLPCheckNameAndHashAndMod(CString username, CString & userhash, CString & modversion)
 #endif
 //SDC team end
 {
@@ -1699,13 +1684,16 @@ LPCTSTR __declspec(dllexport) DLPCheckNameAndHashAndMod(CString username, CStrin
 	}
 #endif
 
-#if (defined(SDC_ALL_VERYCD) || defined(SDC_VERYCD_TAG))
-	if (wcsstr(modversion, L"VeryCD 090304") != nullptr && 
+	if (SDC_VARIANT(AllVeryCD) || SDC_VARIANT(VeryCDTag))
+	{
+	if (wcsstr(modversion, L"VeryCD 090304") != nullptr &&
 		wcsstr(username, L"[CHN]shaohan") == nullptr			//It will be handled by DLPCheckUsername_Hard function.
 	) [[unlikely]]
 		return L"<SDC> all-verycd";
-#elif defined(SDC_VERYCD_NICKNAME)
-	if (wcsstr(modversion, L"VeryCD") != nullptr && 
+	}
+	else if (SDC_VARIANT(VeryCDNickname))
+	{
+	if (wcsstr(modversion, L"VeryCD") != nullptr &&
 	//Below client will be handled by DLPCheckModstring_Hard function.
 		wcsstr(modversion, L" 080126") == nullptr && wcsstr(modversion, L" 080730") == nullptr && wcsstr(modversion, L" 080509") == nullptr && 
 		wcsstr(modversion, L" 080606") == nullptr && wcsstr(modversion, L" 080624") == nullptr && wcsstr(modversion, L" 080630") == nullptr && 
@@ -1749,14 +1737,14 @@ LPCTSTR __declspec(dllexport) DLPCheckNameAndHashAndMod(CString username, CStrin
 		wcsstr(username, L"[easyMule]") != nullptr)))
 	) [[unlikely]]
 		return L"<SDC> verycd-nickname";
-#endif
+	}
 #endif
 //SDC team end
 
 	return NULL;
 }
 
-LPCTSTR __declspec(dllexport) DLPCheckMessageSpam(LPCTSTR messagetext)
+LPCTSTR SDLP_RULE DLPCheckMessageSpam(LPCTSTR messagetext)
 {
 	if (messagetext == NULL)
 		return NULL;
@@ -1787,9 +1775,9 @@ LPCTSTR __declspec(dllexport) DLPCheckMessageSpam(LPCTSTR messagetext)
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-LPCTSTR __declspec(dllexport) DLPCheckHelloTag(const UINT tagnumber)
+LPCTSTR SDLP_RULE DLPCheckHelloTag(const UINT tagnumber)
 #else //Official
-LPCTSTR __declspec(dllexport) DLPCheckHelloTag(UINT tagnumber)
+LPCTSTR SDLP_RULE DLPCheckHelloTag(UINT tagnumber)
 #endif
 //SDC team end
 {
@@ -1844,9 +1832,9 @@ LPCTSTR __declspec(dllexport) DLPCheckHelloTag(UINT tagnumber)
 
 //SDC team start
 #if defined(SPECIAL_DLP_VERSION)
-LPCTSTR __declspec(dllexport) DLPCheckInfoTag(const UINT tagnumber)
+LPCTSTR SDLP_RULE DLPCheckInfoTag(const UINT tagnumber)
 #else //Official
-LPCTSTR __declspec(dllexport) DLPCheckInfoTag(UINT tagnumber)
+LPCTSTR SDLP_RULE DLPCheckInfoTag(UINT tagnumber)
 #endif
 //SDC team end
 {

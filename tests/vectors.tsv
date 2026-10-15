@@ -1,0 +1,93 @@
+# specialdlp test vectors, TAB separated, UTF-8.
+# func	variants	arg1	arg2	arg3	expected
+#
+# func:     modhard(mod, client) modsoft(mod, client) userhard(name) usersoft(name)
+#           namehashmod(name, hash, mod) spam(msg) hellotag(hex) infotag(hex) userhash(hex32)
+# variants: * = all, else comma list of lite,allverycd,easymule,nickname,tag
+# expected: - = NULL (clean)
+# escapes:  \t \\ \xNN \uXXXX ; an empty field is an empty string
+
+# --- DLPCheckModstring_Hard ---
+modhard	*	TM0910 x	eMule v0.50a		Bad MODSTRING
+modhard	*	MorphXT v12.7	eMule v0.50a		-
+modhard	*	ScarAngel v4.9	eMule v0.50a		-
+modhard	*	Xtreme 8.1	eMule v0.50a		-
+modhard	*		eMule v0.50a		-
+modhard	*	x	eMule Compat v0.26.2		Flashget
+modhard	*	xtreme 8.1	eMule v0.50a		Fake Xtreme
+modhard	*	VeryCD 080126	eMule v0.48a		Fake MODSTRING
+modhard	*	Zq	eMule v0.50a		Bad Modstring Scheme
+modhard	*	Morph11XT.9	eMule v0.50a		Bad Modstring Scheme
+modhard	*	eMule-GIFC 1.0	eMule v0.50a		<SDC> Bad ModString
+modhard	*		eMule v5.6a		<SDC> Fake ModString
+modhard	*		eMule		Bad MODSTRING
+modhard	*	fxemule	eMule v0.50a		Bad MODSTRING
+modhard	*	 	eMule v0.50a		Bad MODSTRING
+modhard	*	Mørph 1.0	eMule v0.50a		Bad MODSTRING
+modhard	*	MØRPH 1.0	eMule v0.50a		Bad MODSTRING
+
+# --- DLPCheckModstring_Soft ---
+modsoft	*	Community 1.0	eMule v0.50a		Bad MODSTRING
+modsoft	*	Xtreme 8.1	eMule v1.2		Bad MODSTRING
+modsoft	*	foo.com	eMule v0.50a		Bad MODSTRING
+modsoft	*	Xtreme 8.1	eMule v0.50a		-
+modsoft	lite,easymule,nickname	VeryCD 091127	eMule v0.48a		-
+modsoft	allverycd,tag	VeryCD 091127	eMule v0.48a		<SDC> all-verycd
+modsoft	allverycd,tag	VeryCD 090304	eMule v0.48a		-
+modsoft	lite,allverycd,nickname,tag	easyMule 1.1.4	eMule v0.48a		-
+modsoft	easymule	easyMule 1.1.4	eMule v0.48a		<SDC> easymule
+modsoft	easymule	VeryCD 071109	eMule v0.48a		<SDC> easymule
+modsoft	allverycd	VeryCD 071109	eMule v0.48a		<SDC> all-verycd
+
+# --- DLPCheckUsername_Hard ---
+userhard	*	[eMuleBT]user			Bad USERNAME
+userhard	*	Muse			Bad USERNAME
+userhard	*	mUSE			Bad USERNAME
+userhard	*	normal user			-
+userhard	*	a[ePlus]bc[ePlus]xyz			new Ketamine
+userhard	*	[CHN]yourname			<SDC> Bad UserName
+userhard	*	emuIe-project.net			Bad USERNAME
+userhard	*	FLASHGET			Bad USERNAME
+
+# --- DLPCheckUsername_Soft ---
+usersoft	*	[KOREA]x			Bad USERNAME
+usersoft	*	a\x01b\x01c			Community-Username
+usersoft	*	vabc:com x			X-Treme
+usersoft	*	normal user			-
+usersoft	lite,allverycd,easymule,nickname	nick [VeryCD]			-
+usersoft	tag	nick [VeryCD]			<SDC> verycd-tag
+usersoft	tag	nick [verycd]			<SDC> verycd-tag
+
+# --- DLPCheckNameAndHashAndMod ---
+namehashmod	*	x	154CE646120E96CC798C439A20D26F8D		Community Userhash
+namehashmod	*	x	154ce646120e96cc798c439a20d26f8d		Community Userhash
+namehashmod	*	x	00000000000E00000000000000006F00		Corrupt Userhash
+namehashmod	*	nick 	0123456789ABCDEF0123456789ABCDEF		AEdit
+namehashmod	*	nick	0123456789ABCDEF0123456789ABCDEF	abc12	Hex-Modstring
+namehashmod	*	nick [1a2b3]	0123456789ABCDEF0123456789ABCDEF		Hex-Code-Addon
+namehashmod	*	nick «Xtreme 8.1»	0123456789ABCDEF0123456789ABCDEF	Xtreme 8.1	-
+namehashmod	*	nick	0123456789ABCDEF0123456789ABCDEF	Xtreme 8.1	ModString Thief
+namehashmod	*	nick «MorphXT v12.7»	0123456789ABCDEF0123456789ABCDEF		-
+namehashmod	*	(Abcde) http://emule-project.net [Fghij]	0123456789ABCDEF0123456789ABCDEF	Abcdef 1.2	<SDC> Random ModString
+namehashmod	*		0123456789ABCDEF0123456789ABCDEF		-
+namehashmod	*	nick			-
+namehashmod	nickname	[CHN]yourname	0123456789ABCDEF0123456789ABCDEF	VeryCD 091127	<SDC> verycd-nickname
+namehashmod	nickname	[CHN]我爱电驴	0123456789ABCDEF0123456789ABCDEF	VeryCD 091127	<SDC> verycd-nickname
+namehashmod	lite,easymule	[CHN]yourname	0123456789ABCDEF0123456789ABCDEF	VeryCD 091127	-
+namehashmod	allverycd,tag	[CHN]yourname	0123456789ABCDEF0123456789ABCDEF	VeryCD 090304	<SDC> all-verycd
+
+# --- DLPCheckMessageSpam ---
+spam	*	Join the L33cher now			Spam-Message
+spam	*	   			Spam-Message
+spam	*	　			Spam-Message
+spam	*	hello			-
+
+# --- DLPCheckHelloTag / DLPCheckInfoTag / DLPCheckUserhash ---
+hellotag	*	15			[DodgeBoards & DarkMule eVorteX]
+hellotag	*	54			[new DarkMule]
+hellotag	*	D2			[Chinese Leecher]
+hellotag	*	01			-
+hellotag	*	69			-
+infotag	*	2F			[OMEGA v.07 Heiko]
+infotag	*	30			-
+userhash	*	0123456789ABCDEF0123456789ABCDEF			-

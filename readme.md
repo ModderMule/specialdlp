@@ -18,6 +18,38 @@ Strict DLP Chinese (SDC) is a set of strict DLP (Dynamic Leech Protection) DLLs 
 * [Changelog](https://github.com/chengr28/specialdlp/blob/master/specialdlp/document/changelog.en.txt)
 * [Checksum](https://github.com/chengr28/specialdlp/blob/master/specialdlp/document/checksum.md)
 
+## Portable fork
+
+This fork ([ModderMule/specialdlp](https://github.com/ModderMule/specialdlp)) builds the same SDC rules as a
+cross-platform shared library (Windows, macOS, Linux; x64 and arm64) for [eMuleQt](https://emule-qt.org).
+The rule code in `specialdlp/specialdlp/antiLeech.cpp` stays as close to upstream as possible so upstream
+updates merge cleanly. ATL/shlwapi are replaced by `sdlp_compat.h`.
+
+* **C ABI:** see [`include/specialdlp.h`](include/specialdlp.h).
+  * UTF-16 strings and `extern "C"` functions with an `sdlp_` prefix.
+  * The ABI version is checked at load.
+  * Each check returns NULL for a clean client, or a reason string in static storage.
+* **Variants:** one binary for all of them. Select one at runtime with `sdlp_set_variant()` (lite, all-verycd,
+  easymule, verycd-nickname or verycd-tag), instead of shipping one DLL per variant.
+* **Not compatible with the Xtreme `antiLeech.dll` exports:** `DLPCheckNameAndHashAndMod` took MFC `CString`,
+  which cannot cross a portable ABI.
+* **Unbuilt leftovers:** `specialdlpTester` (Windows/MFC) stays in the tree as a reference, but is no longer
+  built.
+
+Build and test:
+
+```sh
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
+ctest --test-dir build -C Release --output-on-failure
+```
+
+Test coverage:
+* `tests/vectors.tsv` holds positive and negative cases for every rule.
+* On Windows, CI also builds the original upstream DLLs and checks that the port returns the same result for
+  every vector, for each variant.
+* Tagged builds (`v*`) publish per-platform archives plus `SHA256SUMS.txt`.
+
 ## External Links
 
 * [Project in GitLab](https://gitlab.com/chengr28/specialdlp)
