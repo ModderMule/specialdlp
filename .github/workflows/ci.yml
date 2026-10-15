@@ -62,7 +62,7 @@ jobs:
   # Same vectors through the original MFC antiLeech DLL and through the port.
   diff-upstream:
     name: diff vs upstream (windows-x64)
-    runs-on: windows-latest
+    runs-on: windows-2025-vs2026   # upstream needs the v145 toolset + its MFC
     env:
       UPSTREAM_TAG: v44006.1
     steps:
@@ -86,10 +86,9 @@ jobs:
           foreach ($variant in $map.Keys) {
             $cfg = $map[$variant]
             $out = "$PWD\upstream-bin\$variant\"
-            # runner may lack the upstream toolset (v145); v143 builds the same sources
-            # runner lacks Spectre-mitigated MFC libs; codegen mitigation doesn't change rule output
+            # build as upstream ships (v145 + Spectre MFC); the VS 2026 image has MFC for v145 only
             msbuild $proj /m /nologo /v:minimal /p:Configuration=$cfg /p:Platform=x64 `
-              /p:SpectreMitigation=false /p:PlatformToolset=v143 /p:WindowsTargetPlatformVersion=10.0 /p:OutDir=$out /p:IntDir="$PWD\upstream-obj\$variant\"
+              /p:WindowsTargetPlatformVersion=10.0 /p:OutDir=$out /p:IntDir="$PWD\upstream-obj\$variant\"
             if ($LASTEXITCODE -ne 0) { throw "upstream $cfg failed" }
             if (-not (Test-Path "$out\antiLeechx64.dll")) { Get-ChildItem -Recurse $out; throw "antiLeechx64.dll missing for $variant" }
           }
