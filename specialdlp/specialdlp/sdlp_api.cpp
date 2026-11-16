@@ -15,6 +15,7 @@
 
 #include "specialdlp.h"
 #include "sdlp_rules.h"
+#include "sdlp_official.h"
 
 #ifndef SDLP_LIB_VERSION
 #define SDLP_LIB_VERSION "0.0.0"
@@ -185,6 +186,31 @@ SDLP_API const sdlp_char16* sdlp_check_hello_tag(uint32_t tag)
 SDLP_API const sdlp_char16* sdlp_check_info_tag(uint32_t tag)
 {
     return toUtf16Static(DLPCheckInfoTag(tag));
+}
+
+SDLP_API uint32_t sdlp_official_version_max(void)
+{
+    return OfficialVersionMax();
+}
+
+SDLP_API const sdlp_char16* sdlp_check_official_hello_tag(uint32_t tag, uint32_t emule_version)
+{
+    return toUtf16Static(OfficialCheckHelloTag(tag, emule_version));
+}
+
+SDLP_API const sdlp_char16* sdlp_check_official_hello_bits(uint32_t tag, uint32_t value, uint32_t emule_version)
+{
+    return toUtf16Static(OfficialCheckHelloBits(tag, value, emule_version));
+}
+
+SDLP_API const sdlp_char16* sdlp_check_official_info_tag(uint32_t tag, uint32_t emule_version)
+{
+    return toUtf16Static(OfficialCheckInfoTag(tag, emule_version));
+}
+
+SDLP_API const sdlp_char16* sdlp_check_official_info_bits(uint32_t tag, uint32_t value, uint32_t emule_version)
+{
+    return toUtf16Static(OfficialCheckInfoBits(tag, value, emule_version));
 }
 
 } // extern "C"

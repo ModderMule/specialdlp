@@ -14,11 +14,13 @@
     <ClCompile Include="antiLeech.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="sdlp_api.cpp"><Filter>Source Files</Filter></ClCompile>
     <ClCompile Include="sdlp_compat.cpp"><Filter>Source Files</Filter></ClCompile>
+    <ClCompile Include="sdlp_official.cpp"><Filter>Source Files</Filter></ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\specialdlp.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="antiLeech.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="sdlp_compat.h"><Filter>Header Files</Filter></ClInclude>
+    <ClInclude Include="sdlp_official.h"><Filter>Header Files</Filter></ClInclude>
     <ClInclude Include="sdlp_rules.h"><Filter>Header Files</Filter></ClInclude>
   </ItemGroup>
 </Project>

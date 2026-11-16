@@ -57,6 +57,8 @@ std::string show(const std::optional<std::u16string>& s)
     return s ? "\"" + sdlp::test::toUtf8(*s) + "\"" : "NULL";
 }
 
+void officialTests();
+
 void apiTests()
 {
     if (sdlp_abi_version() != SDLP_ABI_VERSION)
@@ -86,6 +88,77 @@ void apiTests()
     // non-BMP chars must not confuse the checks
     if (sdlp_check_username_hard(u"\U0001F600 normal user") != nullptr)
         fail("emoji user must be clean");
+
+    officialTests();
+}
+
+// ghost mod rules (sdlp_official.cpp), not upstream: kept out of vectors.tsv for the diff harness
+void officialTests()
+{
+    constexpr auto ver = [](uint32_t mjr, uint32_t min, uint32_t upd) { return (mjr << 17) | (min << 10) | (upd << 7); };
+    const uint32_t v70b = ver(0, 70, 1);
+    if (sdlp_official_version_max() != v70b)
+        fail("official version max");
+
+    // what 0.70b sends
+    const uint32_t opts1 = (1u << 29) | (1u << 28) | (4u << 24) | (1u << 20) | (3u << 16) | (4u << 12) | (2u << 8)
+                         | (1u << 4) | 0x7u;
+    const uint32_t opts2 = 0x0au | (1u << 4) | (1u << 5) | (7u << 7) | (0xFu << 10);
+    for (const uint32_t tag :
+         {0x01u, 0x0fu, 0x11u, 0x55u, 0xf9u, 0xfau, 0xfbu, 0xfcu, 0xfdu, 0xfeu, 0xefu, 0xa0u, 0xadu, 0xaeu}) {
+        if (sdlp_check_official_hello_tag(tag, v70b))
+            fail("official tag must be clean");
+    }
+    if (sdlp_check_official_hello_bits(0xfa, opts1, v70b) || sdlp_check_official_hello_bits(0xfe, opts2, v70b)
+        || sdlp_check_official_hello_bits(0xfb, v70b, v70b) || sdlp_check_official_hello_bits(0xfd, 0xFFFF, v70b)
+        || sdlp_check_official_hello_bits(0xf9, 0xFFFFFFFFu, v70b))
+        fail("official bits must be clean");
+    if (sdlp_check_official_hello_bits(0xfa, (1u << 31) | (1u << 29), ver(0, 49, 0)) == nullptr) // AICH 5
+        fail("old version must be checked");
+
+    // ghost mod hits
+    if (sdlp_check_official_hello_tag(0xaa, v70b) == nullptr || sdlp_check_official_hello_tag(0, v70b) == nullptr
+        || sdlp_check_official_hello_tag(0x3d, v70b) == nullptr)
+        fail("unknown tag must hit");
+    if (sdlp_check_official_hello_bits(0xfa, opts1 | (2u << 4), v70b) == nullptr) // comments 3
+        fail("comment version 3 must hit");
+    if (sdlp_check_official_hello_bits(0xfe, opts2 | (1u << 6), v70b) == nullptr
+        || sdlp_check_official_hello_bits(0xfe, opts2 | (1u << 20), v70b) == nullptr
+        || sdlp_check_official_hello_bits(0xfe, (opts2 & ~0xFu) | 0x0b, v70b) == nullptr)
+        fail("reserved MiscOptions2 bits must hit");
+    if (sdlp_check_official_hello_bits(0xfb, v70b | 5, v70b) == nullptr)
+        fail("build bits must hit");
+    if (sdlp_check_official_hello_bits(0xfd, 0x10000, v70b) == nullptr)
+        fail("port high bits must hit");
+
+    // future official versions and compatible clients pass
+    const uint32_t v70c = ver(0, 70, 2);
+    const uint32_t v71a = ver(0, 71, 0);
+    if (sdlp_check_official_hello_tag(0xaa, v70c) || sdlp_check_official_hello_tag(0xaa, v71a)
+        || sdlp_check_official_hello_bits(0xfe, opts2 | (1u << 20), v71a)
+        || sdlp_check_official_hello_tag(0xaa, (3u << 24) | v70b))
+        fail("newer version or compatible client must be clean");
+
+    // OP_EMULEINFO, what 0.70b sends; 0 = no hello version (old client)
+    for (const uint32_t v : {v70b, 0u}) {
+        for (const uint32_t tag : {0x20u, 0x21u, 0x22u, 0x23u, 0x24u, 0x25u, 0x26u, 0x27u, 0x55u, 0x94u}) {
+            if (sdlp_check_official_info_tag(tag, v))
+                fail("official info tag must be clean");
+        }
+    }
+    if (sdlp_check_official_info_bits(0x20, 1, v70b) || sdlp_check_official_info_bits(0x21, 0xFFFF, v70b)
+        || sdlp_check_official_info_bits(0x22, 4, v70b) || sdlp_check_official_info_bits(0x23, 3, v70b)
+        || sdlp_check_official_info_bits(0x24, 1, v70b) || sdlp_check_official_info_bits(0x25, 2, v70b)
+        || sdlp_check_official_info_bits(0x27, 0x83, v70b) || sdlp_check_official_info_bits(0x26, 0, v70b))
+        fail("official info values must be clean");
+    if (sdlp_check_official_info_tag(0x3d, v70b) == nullptr || sdlp_check_official_info_tag(0x99, 0) == nullptr)
+        fail("unknown info tag must hit");
+    if (sdlp_check_official_info_bits(0x24, 2, v70b) == nullptr || sdlp_check_official_info_bits(0x27, 0x40, v70b) == nullptr
+        || sdlp_check_official_info_bits(0x21, 0x10000, v70b) == nullptr)
+        fail("info values above official must hit");
+    if (sdlp_check_official_info_tag(0x3d, v71a) || sdlp_check_official_info_tag(0x3d, (1u << 24) | v70b)
+        || sdlp_check_official_info_bits(0x24, 2, v71a))
+        fail("info: newer version or compatible client must be clean");
 }
 
 } // namespace

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 
 # Library semver; the rule set version is DLPVERSION in antiLeech.h
-project(specialdlp VERSION 1.0.0 LANGUAGES CXX)
+project(specialdlp VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -21,6 +21,8 @@ set(SDLP_SOURCES
     ${SDLP_SRC_DIR}/sdlp_api.cpp
     ${SDLP_SRC_DIR}/sdlp_compat.cpp
     ${SDLP_SRC_DIR}/sdlp_compat.h
+    ${SDLP_SRC_DIR}/sdlp_official.cpp
+    ${SDLP_SRC_DIR}/sdlp_official.h
     ${SDLP_SRC_DIR}/sdlp_rules.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/specialdlp.h
 )

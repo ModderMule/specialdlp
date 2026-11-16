@@ -71,6 +71,17 @@ SDLP_API const sdlp_char16* sdlp_check_userhash(const uint8_t* userhash);
 SDLP_API const sdlp_char16* sdlp_check_hello_tag(uint32_t tag);
 SDLP_API const sdlp_char16* sdlp_check_info_tag(uint32_t tag);
 
+/* Ghost mod, own rules (lib 1.1.0+, resolve optionally): a hello from an official-looking eMule
+ * (no modstring) with tags or bits its version never sent. emule_version = raw CT_EMULE_VERSION
+ * value; clean for compatible client != 0 and above sdlp_official_version_max(), so newer
+ * official releases pass. Meant for a score cut, not a ban. */
+SDLP_API uint32_t sdlp_official_version_max(void);
+SDLP_API const sdlp_char16* sdlp_check_official_hello_tag(uint32_t tag, uint32_t emule_version);
+SDLP_API const sdlp_char16* sdlp_check_official_hello_bits(uint32_t tag, uint32_t value, uint32_t emule_version);
+/* Same for OP_EMULEINFO (lib 1.2.0+): emule_version = compatible client << 24 | hello CT_EMULE_VERSION, 0 if none. */
+SDLP_API const sdlp_char16* sdlp_check_official_info_tag(uint32_t tag, uint32_t emule_version);
+SDLP_API const sdlp_char16* sdlp_check_official_info_bits(uint32_t tag, uint32_t value, uint32_t emule_version);
+
 #ifdef __cplusplus
 }
 #endif

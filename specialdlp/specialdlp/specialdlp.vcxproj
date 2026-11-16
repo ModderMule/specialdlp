@@ -137,11 +137,13 @@
     <ClCompile Include="antiLeech.cpp" />
     <ClCompile Include="sdlp_api.cpp" />
     <ClCompile Include="sdlp_compat.cpp" />
+    <ClCompile Include="sdlp_official.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\specialdlp.h" />
     <ClInclude Include="antiLeech.h" />
     <ClInclude Include="sdlp_compat.h" />
+    <ClInclude Include="sdlp_official.h" />
     <ClInclude Include="sdlp_rules.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
